@@ -60,7 +60,7 @@
 #include <limits.h>
 #include <sysexits.h>
 #include <stddef.h>
-
+//void modelexit();
 #ifdef HAVE_GETOPT_LONG
 #include <getopt.h>
 #endif
@@ -4767,13 +4767,14 @@ static void process_command(conn *c, char *command) {
         out_string(c, "VERSION " VERSION);
 
     } else if (ntokens == 2 && (strcmp(tokens[COMMAND_TOKEN].value, "quit") == 0)) {
-
-        conn_set_state(c, conn_closing);
-
+        jaaru_enable_simulating_crash();
+        //conn_set_state(c, conn_closing);
+        out_string(c, "Enabling crash for Jaaru");
     } else if (ntokens == 2 && (strcmp(tokens[COMMAND_TOKEN].value, "shutdown") == 0)) {
 
         if (settings.shutdown_command) {
             conn_set_state(c, conn_closing);
+            exit(EXIT_SUCCESS);
             raise(SIGINT);
         } else {
             out_string(c, "ERROR: shutdown not enabled");
@@ -5563,7 +5564,11 @@ static void drive_machine(conn *c) {
 
         case conn_nread:
             if (c->rlbytes == 0) {
+			time_t ops_begin, ops_end;
+			time(&ops_begin);
                 complete_nread(c);
+			time(&ops_end);
+			fprintf(stderr, "OP time: %ld\n", ops_end-ops_begin);
                 break;
             }
 
@@ -6175,6 +6180,17 @@ static int server_socket_unix(const char *path, int access_mask) {
     return 0;
 }
 
+
+ static int myserversocket() {
+    int sfd = 0;
+
+    listen_conn = conn_new(sfd, conn_listening,
+                                 EV_READ | EV_PERSIST, 1,
+                           local_transport, main_base);
+
+    return 0;
+}
+
 /*
  * We keep the current time of day in a global variable that's updated by a
  * timer event. This saves us a bunch of time() system calls (we really only
@@ -6592,7 +6608,22 @@ static bool _parse_slab_sizes(char *s, uint32_t *slab_sizes) {
     return true;
 }
 
-int main (int argc, char **argv) {
+int realmain (int argc, char **argv);
+
+int main(int argc, char **argv) {
+     int num = jaaru_num_crashes();
+     if (num == 0) {
+         char * array[] = {"/scratch/nvm/memcached-pmem/memcached", "-t", "2", "-A", "-p", "11211", "-m", "0", "-o", "pslab_file=foo,pslab_force", NULL};
+         return realmain(10, array);
+     } else if (num == 1) {
+         char * array[] = {"/scratch/nvm/memcached-pmem/memcached", "-t", "2", "-A", "-p", "11212",  "-m", "0", "-o", "pslab_file=foo,pslab_force,pslab_recover",NULL};
+         return realmain(10, array);
+     } else {
+         printf("jaaru=%d\n", num);
+     }
+}
+ 
+int realmain (int argc, char **argv) {
     int c;
     bool lock_memory = false;
     bool do_daemonize = false;
@@ -7899,6 +7930,9 @@ fprintf(stderr, "pslab_size=%ld", pslab_size);
         }
     }
 
+    if (false) {
+        myserversocket();
+    }
     /* create the listening socket, bind it, and init */
     if (settings.socketpath == NULL) {
         const char *portnumber_filename = getenv("MEMCACHED_PORT_FILENAME");

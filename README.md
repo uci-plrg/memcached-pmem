@@ -35,3 +35,23 @@ should never go to disk, or you've lost the whole point of it)
 ## Contributing
 
 See https://github.com/memcached/memcached/wiki/DevelopmentRepos
+
+## Using with Jaaru
+
+```bash
+./configure --enable-pslab CFLAGS="-O0 -g -I/home/vagrant/pmcheck/Memory"
+make CC=~/pmcheck/Test/gcc
+sed -i 's/export LD_LIBRARY_PATH=.*/export LD_LIBRARY_PATH=~\/pmcheck\/bin\/:~\/pmdk\/src\/debug\//g' run.sh
+sed -i 's/export DYLD_LIBRARY_PATH=.*/export DYLD_LIBRARY_PATH=~\/pmcheck\/bin\/:~\/pmdk\/src\/debug\//g' run.sh
+```
+
+In Server:
+```bash
+./run.sh ./memcached
+```
+
+In client:
+```bash
+telnet localhost 11211
+```
+

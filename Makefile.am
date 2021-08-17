@@ -86,8 +86,8 @@ CLEANFILES += memcached_dtrace.o memcached_debug_dtrace.o
 endif
 
 if ENABLE_PSLAB
-memcached_LDADD += -lpmem
-memcached_debug_LDADD += -lpmem
+memcached_LDADD += -lpmcheck
+memcached_debug_LDADD += -lpmcheck
 endif
 
 memcached_debug_CFLAGS += -DMEMCACHED_DEBUG
